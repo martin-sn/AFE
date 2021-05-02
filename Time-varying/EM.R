@@ -44,7 +44,7 @@ E_step = function(X, GaussianMixture, J){
   
   for (i in 1:n){
     for (j in 1:K){
-      arr[i,j] = prob[j]*dnorm(X[i],mean[j],var[j])
+      arr[i,j] = prob[j]*dnorm(X[i],mean[j],sqrt(var[j]))
       
       total = sum(arr[i,])
       
@@ -70,7 +70,7 @@ E_step = function(X, GaussianMixture, J){
 e = E_step(vY, init_gaus, 5)
 
 post = e[["post"]]
-
+?dnorm
 
 M_step = function(X, post, J){
   n = length(X)
@@ -117,7 +117,7 @@ Run = function(X,J){
   init_gaus = list(vMu, vSigma2, vOmega)
   
   
-  llk_prev = 100000
+  llk_prev = -10000
   
   e = E_step(X, init_gaus, J)
   
@@ -126,7 +126,8 @@ Run = function(X,J){
   
   not_conv = TRUE
   
-  while (not_conv == TRUE){
+ # while (not_conv == TRUE){
+  for (i in 1:3){
     mixture = M_step(X, post, J)
     llk_prev = llk_new
     e = E_step(X, mixture, J)
@@ -134,10 +135,11 @@ Run = function(X,J){
     llk_new = e[["llk"]]
     loops = loops + 1
     
-    if (llk_new - llk_prev <= 0.000001*abs(llk_new)){
-      not_conv = FALSE
+    
+   # if (llk_new - llk_prev <= 0.000001*abs(llk_new)){
+  #    not_conv = FALSE
 
-    }
+   # }
   }
 
   
@@ -146,8 +148,19 @@ Run = function(X,J){
   out[["Post"]] = post
   out[["LLK"]] = llk_new
   out[["loops"]] = loops
+  out[["conv"]] = not_conv
+  out[["llk_prev"]] = llk_prev
+  out[["llk_new"]] = llk_new
   return(out)
   
 }
 
 Run(GSPC_rt,5)
+
+GSPC_rt
+
+GSPC_rt
+
+
+
+
