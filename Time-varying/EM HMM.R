@@ -167,26 +167,41 @@ log(p%^% 10000 * P_Y)
 
 ######## EM with forward and backwards ##### 
 
-EM <- function(Y, J, p){
-  alpha <- array(NA, c(J, length(Y)))
+EM <- function(Y, J, p,delta, mix){
   
   n = length(Y)
   
-  mu_1 = -4
-  mu_2 = 5
-  std_1 = 1.5
-  std_2 = 0.7
+  # Init forward probability array
+  alpha <- array(NA, c(J, n))
   
-  mix = matrix(c(mu_1, mu_2, std_1, std_2), nrow = 2)
   
+  #### Gaussian Mixture ###
+#  mu_1 = -4
+#  mu_2 = 5
+#  std_1 = 1.5
+#  std_2 = 0.7
+  
+ # mix = matrix(c(mu_1, mu_2, std_1, std_2), nrow = 2)
+  
+  mu_1 = mix[1,1]
+  mu_2 = mix[2,1]
+  std_1 = mix[1,2]
+  std_2 = mix[2,2]
+  
+  # We find the limiting (stationairy) distrubtion of the transition matrix
   require(expm)
-  sta_p = p %^% 10000
+  sta_p = delta
 
   # First forward probability
   for (j in 1:J){
     alpha[j,1] = sta_p[1,j]*dnorm(y[1], mix[j,1], mix[j,2])
   }
-  # Remain forward probabilities
+  
+  
+  # Remaining forward probabilities
+  
+  # P(y_1) is a diagonal matrix with j,j-th element p_j(y_1)
+  # p_j(y_1) is the density for gaussian j
   
   for (i in 2:length(Y)){
     P_1 = dnorm(y[i], mix[1,1],mix[1,2])
@@ -245,9 +260,16 @@ EM <- function(Y, J, p){
   
   # We have (T-1)*J^2  of the switching probabilities
   
+  P_matrix = array(NA, c(J,J,n))
+
+  
+  for (i in 2:n){
+    P_1 = dnorm(y[i], mix[1,1],mix[1,2])
+    P_2 = dnorm(y[i], mix[2,1], mix[2,2])
+    P_matrix[,,i] = matrix(c(P_1,0,0,P_2), nrow = 2)
   
   
-  SmoothSwitch = array(NA, dim = c(J,J, length(y))) # Not sure about this 
+  SmoothSwitch = array(NA, dim = c(J,J,n)) # Not sure about this 
   
   SmoothSwitch[,,1] = p
   
@@ -273,20 +295,134 @@ EM <- function(Y, J, p){
   
   #### Q Func ####
   
-  QFunc = sum()
+  # P(u) is equavalent to smooth prob
+  # P(v) is equivalent to smooth switch
   
   
+  Q_func = 0 
 
+  E_J = 0
+  E_JJ = 0
+  E_JJJ = 0
+  
+  for (jj in 1:J){
+    E_J = E_J + sum(smooth[1,jj]*log(sta_p[jj]))
+    for (k in 1:J){
+      E_JJ = E_JJ + sum(SmoothSwitch[jj,k,]) * log(p[jj,k])
+    }
+  }
+    
+    for (iii in 2:n){
+      for (jjj in 1:j){
+        E_JJJ = E_JJJ + smooth[jjj,iii]*log(P_matrix[jjj,jjj,i])
+        
+    }
+    
+    
+    }
+  
+  
+    
+    
+  }
+  
+  Q_func = E_J + E_JJ + E_JJJ
+
+  
+  out[["Q_func"]] = Q_func
+
+  
   return(out)
   
 }
 
+####### The M Step ######
 
-res = EM(y, 2, p)
+# u hat is the smoothed probabilities
+# v hat is the smoothed switching
 
-res$SmoothSwitch
 
-plot(y, type = "l")
+M_Step <- function(EM_out, J,Y){
+  
+  Smooth=EM_out[["Smooth"]]
+  SmoothSwitch=EM_out[["SmoothSwitch"]]
+  
+  delta = matrix(NA, nrow = J, ncol = J)
+  
+  for (j in 1:J){
+    delta[j,] = Smooth[j,1]
+  }
+  
+  gamma = matrix(NA, nrow = J, ncol = J)
+  
+  for (j in 1:J){
+    for (k in 1:J){
+      gamma[j,k] = sum(SmoothSwitch[j,k,]) / sum(SmoothSwitch[j,,])
+      
+  
+    }
+    
+  }
+
+  mu = matrix(NA, nrow = J, ncol = 1)
+  sigma = matrix(NA, nrow = J, ncol = 1)
+  
+  for (j in 1:J){
+    mu[j] = sum(Smooth[j,]*Y) / sum(Smooth[j,])
+    sigma[j] = sum(Smooth[j,]*(Y-mu[j])**2)/sum(Smooth[j,])
+    
+  }
+  
+  mix = matrix(NA, nrow = J, ncol = J)
+  
+  mix[,1 ] = mu
+  mix[,2 ] = sigma
+  
+  
+  
+  out = list()
+  
+  out[["delta"]] = delta
+  out[["gamma"]] = gamma
+  out[["mix"]] = mix
+  
+  
+  return(out)
+  
+  
+}
+
+M = M_Step(res, 2, y)
+
+M$mix
+
+### Run ### 
+
+run <- function(iterations, mix, J, Y,p){
+  
+  # Inital mix
+  mu_1 = 10
+  mu_2 = -5
+  std_1 = 1.5
+  std_2 = 0.7
+  
+  mix = matrix(c(mu_1, mu_2, std_1, std_2), nrow = 2)
+  
+  delta = p %^% 10000
+  
+  for (i in 1:iterations){
+    E <- EM(Y, J, p, delta, mix)
+    print(E$LLK)
+    M <- M_Step(E, J, Y)
+    mix = M$mix
+    p = M$gamma
+  }
+    
+  
+}
+
+
+run(10, 0, 2, y, p)
 
 
 ######## EM Algorithm for HMM ######## 
@@ -304,7 +440,7 @@ plot(y, type = "l")
 EM_algo <- function(X, Mixture){
   
 ### E-Step ###
-
+  
   
   
   
