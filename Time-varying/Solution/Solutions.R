@@ -98,6 +98,10 @@ EM_Gauss <- function(vY, iJ, itermax = 1e3, tol = 1e-6) {
   
 }
 
+EM_Gauss(y, 2)
+
+y
+
 ##
 
 # Estimate a Gaussian mixture model assuming that the returns are iid. Choose the

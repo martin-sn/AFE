@@ -2,7 +2,7 @@
 
 ### Simulate T = 5000 observations from a HMM with J = 2 regimes and trasition probability matrix
 
-dat = c(0.80, 0.2, 0.15, 0.85)
+dat = c(0.9, 0.1, 0.1, 0.9)
 p = matrix(dat,nrow = 2, byrow = TRUE)
 
 
@@ -20,28 +20,23 @@ sim_hmm = function(prob_matrix, n, j){
   
 }
 
-log(0.0000001)
-
-dnorm(y, 0, 1, log = TRUE)
-
-dnorm(y, -4, 1, log = TRUE)
 
 
 #testing new sim
 dat = c(0.65, 0.35, 0.29, 0.71)
 p = matrix(dat,nrow = 2, byrow = TRUE)
 
-sim = sim_hmm(p, 100, 2)
+sim = sim_hmm(p, 1000, 2)
 
 plot(sim, type = "l")
 
 
-mu_1 = -4
-mu_2 = 5
-sigma_1 = 1.5
-sigma_2 = 0.7
-s_1 = 1.5
-s_2 = 0.7
+mu_1 = 1.2
+mu_2 = 1.0
+sigma_1 = 0.9
+sigma_2 = 1.2
+s_1 = 0.9
+s_2 = 1.2
 
 sim[1] == 1
 
@@ -296,7 +291,9 @@ EM <- function(Y, J, p,delta, mix){
   
   #### Q Func ####
   
-  # P(u) is equavalent to smooth prob
+  # It seems that we actually do not need to compute the Q func. 
+  
+  # P(u) is equivalent to smooth prob
   # P(v) is equivalent to smooth switch
   
   
@@ -402,7 +399,7 @@ M$mix
 
 seq(0.7,1.5, length.out = 2)
 
-run <- function(iterations, mix, J, Y){
+run <- function(iterations, J, Y){
   
   # Inital mix
   mu_1 = mean(Y) * 0.7
@@ -435,7 +432,7 @@ run <- function(iterations, mix, J, Y){
 }
 
 
-res = run(25, 0, 2, y)
+res = run(50, 2, y)
 
 res$Mix
 
