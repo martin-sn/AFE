@@ -2,7 +2,7 @@
 
 ### Simulate T = 5000 observations from a HMM with J = 2 regimes and trasition probability matrix
 
-dat = c(0.97, 0.03, 0.01, 0.99)
+dat = c(0.80, 0.2, 0.15, 0.85)
 p = matrix(dat,nrow = 2, byrow = TRUE)
 
 
@@ -56,6 +56,7 @@ sim
 pnorm(1,-4,1.5)
 
 dnorm(1,-4,1.5)
+
 
 
 
@@ -369,7 +370,7 @@ M_Step <- function(EM_out, J,Y){
   
   for (j in 1:J){
     mu[j] = sum(Smooth[j,]*Y) / sum(Smooth[j,])
-    sigma[j] = sum(Smooth[j,]*(Y-mu[j])**2)/sum(Smooth[j,])
+    sigma[j] = sqrt(sum(Smooth[j,]*(Y-mu[j])**2)/sum(Smooth[j,]))
     
   }
   
@@ -398,31 +399,51 @@ M$mix
 
 ### Run ### 
 
-run <- function(iterations, mix, J, Y,p){
+
+seq(0.7,1.5, length.out = 2)
+
+run <- function(iterations, mix, J, Y){
   
   # Inital mix
-  mu_1 = 10
-  mu_2 = -5
-  std_1 = 1.5
-  std_2 = 0.7
+  mu_1 = mean(Y) * 0.7
+  mu_2 = mean(Y) * 1.5
+  std_1 = var(Y) * 0.7
+  std_2 = var(Y) * 1.5
   
   mix = matrix(c(mu_1, mu_2, std_1, std_2), nrow = 2)
+  
+  # Inital p 
+  
+  p = matrix(c(0.95,0.05,0.05,0.95), byrow = TRUE, nrow = 2)
   
   delta = p %^% 10000
   
   for (i in 1:iterations){
     E <- EM(Y, J, p, delta, mix)
     print(E$LLK)
+    print(p)
     M <- M_Step(E, J, Y)
     mix = M$mix
     p = M$gamma
   }
+
+  out = list()
+  out[["Mix"]] = mix
+  out[["p"]] = p
     
-  
+  return(out)
 }
 
 
-run(10, 0, 2, y, p)
+res = run(25, 0, 2, y)
+
+res$Mix
+
+res$p
+
+# The algorithm works!!!! 
+# However, there is an issue. -Inf likelihood with large samples. 
+# Maybe we need a robust way of computing the log likelihood. 
 
 
 ######## EM Algorithm for HMM ######## 
@@ -436,15 +457,3 @@ run(10, 0, 2, y, p)
 # to be estimated (the missing data are substituted by their conditional expectation)
 # 4. Iterate 2. and 3. until convergence. 
 
-### EM ALGO
-EM_algo <- function(X, Mixture){
-  
-### E-Step ###
-  
-  
-  
-  
-}
-
-
-array(NA, dim = c(2,2, length(y)))
