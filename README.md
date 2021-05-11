@@ -1,4 +1,4 @@
-# Code for the course "Advanced Financial Econometrics" at Aarhus University. 
+Code for the course "Advanced Financial Econometrics" at Aarhus University. 
 
 Topics include: 
 
