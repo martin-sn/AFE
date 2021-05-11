@@ -2,8 +2,6 @@ Code for the course "Advanced Financial Econometrics" at Aarhus University.
 
 Topics include: 
 
-Indhold
-
 Time-varying parameter models: 
 - Latent class models for financial econometrics.
 - Advances in GARCH models: Markov Switching GARCH and Mixture GARCH.
