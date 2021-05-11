@@ -2,6 +2,8 @@
 
 ### GET DATA ###
 
+
+
 library(quantmod)
 
 SP = getSymbols("^GSPC", from = "2002-01-02", to = "2008-08-29", auto.assign = FALSE)
