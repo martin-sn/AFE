@@ -21,7 +21,6 @@ sim_hmm = function(prob_matrix, n, j){
 }
 
 
-
 #testing new sim
 dat = c(0.65, 0.35, 0.29, 0.71)
 p = matrix(dat,nrow = 2, byrow = TRUE)
