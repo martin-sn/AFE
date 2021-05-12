@@ -1,7 +1,4 @@
-# setwd("G:/Dropbox/Teaching/Aarhus_Advanced Financial Econometrics/2021/Exercise/data/")
-setwd("C:/Users/au588008/Dropbox/Teaching/Aarhus_Advanced Financial Econometrics/2021/Exercise/data/")
-
-vY = GSPC_rt
+vY = read.csv("Time-varying/Data/sp500ret.csv", sep = ",", row.names = 1, header = FALSE, stringsAsFactors = FALSE)[[1]]
 
 ### Functions for EM of Gaussian mixture model
 # this function computes log(sum(exp(vX))) in a robust way
@@ -98,10 +95,6 @@ EM_Gauss <- function(vY, iJ, itermax = 1e3, tol = 1e-6) {
   
 }
 
-EM_Gauss(y, 2)
-
-y
-
 ##
 
 # Estimate a Gaussian mixture model assuming that the returns are iid. Choose the
@@ -113,14 +106,14 @@ for (iJ in 1:5) {
   lFit[[iJ]] = EM_Gauss(vY, iJ)
 }
 
-lFit
-
-
-
 vBIC = sapply(lFit, function(x) x$BIC)
 
-LLK = sapply(lFit, function(x) x$LLK)
+vBIC
 
+vBIC = sapply(lFit, function(x) x$vMu)
+
+
+vBIC
 
 
 which.min(vBIC)
