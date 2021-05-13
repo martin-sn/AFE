@@ -1,53 +1,56 @@
-### Generate Gaussian Mixture ###
-
-## Mixture in matrix format. First column is mean, second column is standard deviation, third is mix proportion. ##
-Mixture = matrix(c(5,-4,1.5,0.7,0.95,0.05), nrow = 2, byrow = FALSE)
+##### EM Algorithm for Zero Inflated Poisson #####
 
 
-
-## Simulate Gaussian Mixture ##
-
-
-SimGaussMix <- function(n, Mixture){
-  
+SimZIP <- function(n, p, lambda){
   Y = array(NA, n)
-  J = nrow(Mixture)
-  
   for (i in 1:n){
-    Gaus = sample(c(1:J),size = 1, prob = Mixture[,3])
-    Y[i] = rnorm(1, mean = Mixture[Gaus,1], sd = Mixture[Gaus,2])
-
+    Y[i] = (1-rbinom(1,1, prob = p))*rpois(1,1)
   }
   return(Y)
 }
 
-Y = SimGaussMix(1000, Mixture)
+plot(SimZIP(100,0.5,10), type = "l")
+rpois(1,10)
 
-plot(Y, type = "l")
 
-### Estimate Gaussian Mixture by EM Algorithm ###
+### Estimate ZIP by EM Algorithm ###
 
 # E-Step
+PMF_ZIP <- function(y,p,lambda){
+  if (y == 0){
+    prob = p + (1-p)*exp(-lambda)
+  }
+  else{
+    prob = (1-p)*(exp(-lambda)*lambda**(y))/factorial(y)
+  }
+  return(prob)
+}
 
-E_EMGaussMix <- function(Y,J, Mixture){
+
+E_EMZIP <- function(Y,J, Mixture){
   
   N = length(Y)
   P = array(NA, c(N,J))
   
   for (i in 1:N){
     for (j in 1:J){
-      P[i,j] = Mixture[j,3]*dnorm(Y[i], Mixture[j,1], Mixture[j,2]) / sum(Mixture[,3]*dnorm(Y[i], Mixture[,1], Mixture[,2]))
+      P[i,j] = dnorm(Y[i], Mixture[j,1], Mixture[j,2])
     }
   }
   return(P)
 }
 
+#### Probability of a ZIP ####
+# Y can be 0, if either poison process outputs zero, or the bernoulli is 1
+# So it is the probability that B = 1 + prob that B != 0 and pois = 0
+# If y is not zero, then the probability that B is 1 is 0. 
+
 
 # M-Step 
-
-M_EMGaussMix <- function(Y,J,P){
+M_EMZIP <- function(Y,J,P){
   
   N = length(Y)
+  
   Mixture = array(NA, dim = c(J,3))
   
   for (j in 1:J){
@@ -67,7 +70,7 @@ Run_EMGaussMix <- function(Y,J, IT){
   N = length(Y)
   
   Mixture = array(NA, dim = c(J,3))
-
+  
   seq_init = seq(from = 0.7, to = 1.5, length.out = J)
   
   Mixture[,1] = mean(Y) * seq_init
@@ -89,10 +92,10 @@ Run_EMGaussMix <- function(Y,J, IT){
     
     LLK = LLK + log(K_LLK)
     
-
+    
     
   }
-
+  
   print(paste("LLK:",sum(LLK)))
   
   BIC = (nrow(Mixture)*3-1)*log(N) - 2*sum(LLK)
@@ -102,10 +105,3 @@ Run_EMGaussMix <- function(Y,J, IT){
   
   
 }
-
-
-Run_EMGaussMix(vY,3,1000)
-
-plot(density(vY))
-
-plot(density(Y))
