@@ -82,8 +82,56 @@ library(MSGARCH)
 spec <- CreateSpec()
 fit <- FitMCMC(spec = spec, data = sim, ctr = list(nburn = 500L, nmcmc = 500L, nthin = 1L))
 fit <- FitML(spec = spec, data = sim, ctr = list(nburn = 500L, nmcmc = 500L, nthin = 1L))
-
-
 summary(fit)
 
+
+### Estimate Manually ###
+
+# Likelihood of a gausian MS Garch(1,1) #
+
+MSGARCH_GAUSS_LLK <- function(Y,J,P){
+  
+  n = length(Y)
+  LLK = 0
+  
+  for (i in 1:N){
+    for (j in 1:J){
+      for (k in 1:J){
+        LLK = LLK + log(P[j,k]) + log()
+      }
+    }
+  }
+}
+
+
+
+
+
+### Estimate with MS GARCH Package ###
+
+library(tidyverse)
+
+SP500 <- read_csv("Time-varying/Data/sp500ret.csv", col_names = FALSE)
+
+# Estimate
+library(MSGARCH)
+spec_gaus <- CreateSpec(variance.spec =list(model = c("sGARCH")), distribution.spec = list(distribution = c("norm")), switch.spec = list(K=2))
+fit_gaus <- FitML(spec = spec_gaus, data = SP500$X2)
+summary(fit_gaus)
+
+
+
+Pred
+# Plot conditional volatility 
+
+plot(Volatility(fit_gaus))
+
+plot(State(fit_gaus)$SmoothProb[,1,2,drop = TRUE])
+
+
+
+
+spec_t <- CreateSpec(variance.spec =list(model = c("sGARCH")), distribution.spec = list(distribution = c("std")), switch.spec = list(K=2))
+fit_t <- FitML(spec = spec_t, data = SP500$X2)
+summary(fit_t)
 
