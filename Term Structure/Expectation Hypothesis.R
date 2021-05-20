@@ -210,3 +210,39 @@ summary(reg)
 plot(reg$residuals, type = "l")
 
 
+##### Vasicek vs CIR ##### 
+
+# We regress Y1,t+1 - y1,t on y_1t, square the residuals
+
+HM <- function(y1){
+  sn <- diff((y1))
+  y1 = y1[1:(length(y1)-1)]
+  
+  reg <- lm(sn ~ y1)
+  
+  reg_resid <- lm(reg$residuals**2 ~ y1**2)
+  
+  
+  return(reg_resid)
+  
+}
+
+test <- HM(Final_arr[,2])
+
+summary(test)
+
+
+# Fix the moint format because it is weird #
+Moint_1 <- as.vector(moint[-1,1])
+moint_arr <- array(NA, dim = nrow(Moint_1))
+
+for (i in 1:nrow(Moint_1)){
+  moint_arr[i] = Moint_1[[i,1]]
+}
+
+test_moint <- HM((moint_arr))
+
+summary(test_moint)
+
+# Coefficient for y1 is insigificant (barely) The Vasicek model is favored
+
