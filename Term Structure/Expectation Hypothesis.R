@@ -246,3 +246,139 @@ summary(test_moint)
 
 # Coefficient for y1 is insigificant (barely) The Vasicek model is favored
 
+
+# Homoskedastic model # 
+
+
+b = test_moint$coefficients[[2]]
+
+phi = b+1
+
+
+
+## Get Beta ## 
+
+# Get forward rate 
+
+
+fw <- moint[-1,11]$BBUSD11 + 12*(moint[-1,12]$BBUSD12 - moint[-1,11]$BBUSD11)
+
+plot(fw)
+
+
+avg_diff <- 1/nrow(fw)*sum(fw - moint[-1,1])
+
+nrow(fw)
+
+sum(fw-moint[-1,1])
+
+sigma2 <- var(test_moint$residuals)
+sigma2
+
+beta = 2
+f <- function(beta){
+  res = -(1/(1-phi))**2*sigma2/2-(beta/(1-phi))*sigma2 - avg_diff
+  return(res)
+}
+
+beta <- uniroot(f, lower = -100, upper = 1000)$root
+
+beta
+
+mu = mean(moint[-1,1]$BBUSD1M) + beta**2*sigma2/2
+
+
+mean(moint[-1,1]$BBUSD1M)
+
+(1-phi)*(mu-0.5*beta**2*sigma2)
+
+test_moint$coefficients
+
+x_t <- moint[-1,1]$BBUSD1M + 0.5*beta**2*sigma2
+
+plot(x_t, type = "l")
+
+fnt <- function(n, mu, beta, phi, sigma2, xt){
+  fnt <- array(NA, dim = length(xt))
+  fnt <- mu - (beta + (1-phi**n)/(1-phi))**2*sigma2/2+(phi**n)*(x_t-mu)
+  
+  return(fnt)
+}
+
+
+fnt_arr <- array(NA, dim = c(length(x_t), 11))
+
+length(x_t)
+
+for (i in 1:11){
+  fnt_arr[,i] <- fnt(i+1, mu,beta,phi,sigma2,x_t)
+}
+
+plot(fnt_arr[,11], type = "l")
+plot(fw)
+
+
+fnt_arr-fw
+
+head(fnt_arr[,11])
+head(fw)
+
+
+plot(fw)
+
+fw
+plot(fw$BBUSD11)
+
+
+fw
+
+plot(moint[2,])
+
+moint[50,]
+
+
+##### Test with Large data #####
+
+
+HM <- function(y1){
+  sn <- diff((y1))
+  y1 = y1[1:(length(y1)-1)]
+  
+  reg <- lm(sn ~ y1)
+  
+  reg_resid <- lm(reg$residuals**2 ~ y1**2)
+  
+  
+  return(reg_resid)
+  
+}
+
+test <- HM(Final_arr[,2])
+
+Final_arr
+
+b = test$coefficients[[2]]
+
+phi = b+1
+
+fw <- Final_arr[,11] + 12*(Final_arr[,13] - Final_arr[,11])
+
+avg_diff <- 1/length(fw)*sum(fw - Final_arr[,2])
+
+sigma2 <- var(test$residuals)
+
+beta <- uniroot(f, lower = -100, upper = 1000)$root
+
+mu = mean(Final_arr[,2]) + beta**2*sigma2/2
+
+x_t <- Final_arr[,2] + 0.5*(beta**2)*sigma2
+
+fnt_arr <- array(NA, dim = c(length(x_t), 11))
+
+for (i in 1:11){
+  fnt_arr[,i] <- fnt(i+1, mu,beta,phi,sigma2,x_t)
+}
+
+plot(fnt_arr[1,])
+
+
