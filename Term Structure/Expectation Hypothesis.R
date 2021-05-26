@@ -154,7 +154,7 @@ LongYield(Final_arr[,2], Final_arr[,13], Final_arr[,12], 12)
 ShortRate <- function(y1,yn,yn_minus, n){
   sn = array(NA, dim = (length(y1))) 
   
-  for (i in 1:(length(Y))){
+  for (i in 1:(length(y1))){
     sn[i] = yn[i] - y1[i] # Yield spread
   }
   sn_star <- array(NA, dim = (length(y1)-n))
@@ -168,7 +168,7 @@ ShortRate <- function(y1,yn,yn_minus, n){
     sn_star[i-1] = sum(sn_star_i)
     
   }
-  reg <- lm(sn_star~Y[2:(length(sn_star)+1)]) 
+  reg <- lm(sn_star~sn[2:(length(sn_star)+1)]) 
   return(reg)
 }
 
@@ -212,6 +212,29 @@ plot(reg$residuals, type = "l")
 
 ##### Vasicek vs CIR ##### 
 
+
+# Fix the moint format because it is weird #
+
+Moint_1 <- as.vector(moint[,1])
+moint_arr <- array(NA, dim = nrow(Moint_1))
+
+for (i in 1:nrow(Moint_1)){
+  moint_arr[i] = Moint_1[[i,1]]
+}
+
+
+moint_matrix <- array(NA, dim = dim(moint))
+
+for (i in 1:nrow(moint)){
+  for (j in 1:ncol(moint)){
+    moint_matrix[i,j] = moint[[i,j]]
+    
+    
+  }
+  
+}
+
+
 # We regress Y1,t+1 - y1,t on y_1t, square the residuals
 
 HM <- function(y1){
@@ -220,165 +243,325 @@ HM <- function(y1){
   
   reg <- lm(sn ~ y1)
   
-  reg_resid <- lm(reg$residuals**2 ~ y1**2)
+  reg_resid <- lm(reg$residuals**2 ~ (y1**2))
   
   
   return(reg_resid)
   
 }
 
-test <- HM(Final_arr[,2])
+TestMoint <- HM(moint_arr)
 
-summary(test)
-
-
-# Fix the moint format because it is weird #
-Moint_1 <- as.vector(moint[-1,1])
-moint_arr <- array(NA, dim = nrow(Moint_1))
-
-for (i in 1:nrow(Moint_1)){
-  moint_arr[i] = Moint_1[[i,1]]
-}
-
-test_moint <- HM((moint_arr))
-
-summary(test_moint)
+summary(TestMoint)
 
 # Coefficient for y1 is insigificant (barely) The Vasicek model is favored
 
 
-# Homoskedastic model # 
+TestLargeData <- HM(Final_arr[,2])
+
+summary(TestLargeData)
+
+# coefficient is way more significant in this one! 
 
 
-b = test_moint$coefficients[[2]]
+### Model forward rates using the Vasicek (Homoscedastic model) ###
 
-phi = b+1
-
-
-
-## Get Beta ## 
-
-# Get forward rate 
-
-
-fw <- moint[-1,11]$BBUSD11 + 12*(moint[-1,12]$BBUSD12 - moint[-1,11]$BBUSD11)
-
-plot(fw)
-
-
-avg_diff <- 1/nrow(fw)*sum(fw - moint[-1,1])
-
-nrow(fw)
-
-sum(fw-moint[-1,1])
-
-sigma2 <- var(test_moint$residuals)
-sigma2
-
-beta = 2
-f <- function(beta){
-  res = -(1/(1-phi))**2*sigma2/2-(beta/(1-phi))*sigma2 - avg_diff
-  return(res)
-}
-
-beta <- uniroot(f, lower = -100, upper = 1000)$root
-
-beta
-
-mu = mean(moint[-1,1]$BBUSD1M) + beta**2*sigma2/2
-
-
-mean(moint[-1,1]$BBUSD1M)
-
-(1-phi)*(mu-0.5*beta**2*sigma2)
-
-test_moint$coefficients
-
-x_t <- moint[-1,1]$BBUSD1M + 0.5*beta**2*sigma2
-
-plot(x_t, type = "l")
-
-fnt <- function(n, mu, beta, phi, sigma2, xt){
-  fnt <- array(NA, dim = length(xt))
-  fnt <- mu - (beta + (1-phi**n)/(1-phi))**2*sigma2/2+(phi**n)*(x_t-mu)
+HomoModel <- function(y_matrix, maturities){
   
-  return(fnt)
-}
-
-
-fnt_arr <- array(NA, dim = c(length(x_t), 11))
-
-length(x_t)
-
-for (i in 1:11){
-  fnt_arr[,i] <- fnt(i+1, mu,beta,phi,sigma2,x_t)
-}
-
-plot(fnt_arr[,11], type = "l")
-plot(fw)
-
-
-fnt_arr-fw
-
-head(fnt_arr[,11])
-head(fw)
-
-
-plot(fw)
-
-fw
-plot(fw$BBUSD11)
-
-
-fw
-
-plot(moint[2,])
-
-moint[50,]
-
-
-##### Test with Large data #####
-
-
-HM <- function(y1){
-  sn <- diff((y1))
-  y1 = y1[1:(length(y1)-1)]
-  
+  # y1,t+1 - y1,t and run equation 8 (lecture 2 slides) regression
+  sn <- diff(y_matrix[,1])
+  y1 = y_matrix[1:(nrow(y_matrix)-1),1]
   reg <- lm(sn ~ y1)
   
-  reg_resid <- lm(reg$residuals**2 ~ y1**2)
+  # Compute observed forward rates (slide 7 lecture 1)
+  
+  ForwardRate <- function(yn1, yn, n){
+    fw <- yn + (n+1)*(yn1-yn)
+    return(fw)
+  }
+  
+  FW_Matrix <- array(NA, dim = dim(y_matrix))
+  
+  for (i in 1:(ncol(y_matrix)-1)){
+    FW_Matrix[,i] = ForwardRate(y_matrix[,i+1], y_matrix[,i],maturities[i]*12)
+  }
+  
+  n = ncol(y_matrix)
+  b = reg$coefficients[[2]]
+  phi = b+1
+  sigma2 <- var(reg$residuals)
+  avg_diff <- mean(y_matrix[,n] - y_matrix[,1])
+  
+  beta_func <- function(beta){
+    res = (1/(1-phi))**2*sigma2/2+(beta/(1-phi))*sigma2 + avg_diff
+    return(res)
+  }
+  beta <- uniroot(beta_func, lower = -1000, upper = 1000)$root
   
   
-  return(reg_resid)
+  mu_func <- function(mu){
+    res = (1-phi)*(mu-0.5*beta**2*sigma2) - reg$coefficients[[1]]
+  }
+  
+  mu <- uniroot(mu_func, lower = -100, upper = 100)$root
+  
+  fnt <- function(n, mu, beta, phi, sigma2, xt){
+    fnt <- array(NA, dim = length(xt))
+    fnt <- mu - (beta + (1-phi**n)/(1-phi))**2*sigma2/2+(phi**n)*(x_t-mu)
+    return(fnt)
+  }
+    
+  
+  x_t <- y_matrix[,1] + 0.5*beta**2*sigma2
+  
+  fnt_arr <- array(NA, dim = c(length(x_t), length(maturities)))
+  
+
+  for (i in 1:length(maturities)){
+    fnt_arr[,i] <- fnt(maturities[i], mu,beta,phi,sigma2,x_t)
+  }
+
+  out = list()
+  
+  out[["fnt_arr"]] = fnt_arr
+  out[["FW_Matrix"]] = FW_Matrix
+  
+  return(out)
+}
+
+
+Hom <- HomoModel(Final_arr[,2:13], Maturities[2:13])
+
+plot(y=Hom$fnt_arr[150,1:12],x = Maturities[1:12], type = "l")
+lines(Hom$FW_Matrix[150,1:12], x = Maturities[1:12], type = "l", col = "red")
+
+plot(Final_arr[1,2:30])
+lines(Hom$FW_Matrix[1,1:12], col = "red")
+
+MeanForward = array(NA, dim = 12)
+MeanForwardPred = array(NA, dim = 12)
+
+
+for (i in 1:12){
+  MeanForwardPred[i] = mean(Hom$fnt_arr[,i])
+}
+
+for (i in 1:12){
+  MeanForward[i] = mean(Hom$FW_Matrix[,i])
+}
+
+
+plot(MeanForward, type = "l", ylim = c(5,15))
+lines(MeanForwardPred, type = "l", col = "red")
+
+Moint_Maturities <- c(1/12, 2/12, 3/12, 4/12, 5/12, 6/12, 7/12, 8/12, 9/12, 10/12, 11/12, 12/12)
+
+Hom <- HomoModel(moint_matrix, Moint_Maturities)
+
+
+plot(y=Hom$fnt_arr[150,1:12],x = Maturities[1:12], type = "l", xlim=c(0,1), ylim =c(4,10))
+lines(Hom$FW_Matrix[150,1:12], x = Maturities[1:12], type = "l", col = "red")
+
+MeanForward = array(NA, dim = 12)
+MeanForwardPred = array(NA, dim = 12)
+
+
+for (i in 1:12){
+  MeanForwardPred[i] = mean(Hom$fnt_arr[,i])
+}
+
+for (i in 1:12){
+  MeanForward[i] = mean(Hom$FW_Matrix[,i])
+}
+
+
+plot(MeanForward, type = "l", ylim = c(5,10))
+lines(MeanForwardPred, type = "l", col = "red")
+
+MeanForwardPred
+MeanForward
+
+
+
+plot(moint_matrix[150,1:12])
+lines(Hom$FW_Matrix[150,1:12], col = "red")
+
+
+
+
+#### Nelson-Siegel ####
+
+NelsonSiegel <- function(y_matrix, maturities){
+  
+  
+  # Here t actually needs to be estimated. But for simplicity we can leave this out (Diebold & Li 2006)
+  # https://www.sas.upenn.edu/~fdiebold/papers/paper49/Diebold-Li.pdf
+  t = 0.3
+  maturities = maturities*12
+  b_1 <- array(NA, dim = ncol(y_matrix))
+  b_2 <- array(NA, dim = ncol(y_matrix))
+  
+  for (i in 1:ncol(y_matrix)){
+    b_1[i] = (1-exp(-maturities[i]/t))/(maturities[i]/t)
+    b_2[i] = (1-exp(-maturities[i]/t))/(maturities[i]/t) - exp(-maturities[i]/t)
+  }
+  
+  fw_matrix <- array(NA, dim = dim(y_matrix))
+  
+  for (i in 1:nrow(fw_matrix)){
+    reg <- lm(y_matrix[i,]~b_1 + b_2)
+    
+    fw_matrix[i,] <- reg$fitted.values
+  }
+
+  
+  
+  
+  
+  return(fw_matrix)
   
 }
 
-test <- HM(Final_arr[,2])
 
-Final_arr
 
-b = test$coefficients[[2]]
-
-phi = b+1
-
-fw <- Final_arr[,11] + 12*(Final_arr[,13] - Final_arr[,11])
-
-avg_diff <- 1/length(fw)*sum(fw - Final_arr[,2])
-
-sigma2 <- var(test$residuals)
-
-beta <- uniroot(f, lower = -100, upper = 1000)$root
-
-mu = mean(Final_arr[,2]) + beta**2*sigma2/2
-
-x_t <- Final_arr[,2] + 0.5*(beta**2)*sigma2
-
-fnt_arr <- array(NA, dim = c(length(x_t), 11))
-
-for (i in 1:11){
-  fnt_arr[,i] <- fnt(i+1, mu,beta,phi,sigma2,x_t)
+NelsonSiegelPackage <- function(y_matrix, maturities){
+  require(YieldCurve)
+  
+  fit <- Nelson.Siegel(y_matrix,maturities)
+  
+  Fit_arr <- array(NA, dim = dim(y_matrix))
+  
+  beta_0 <- fit[,1]
+  beta_1 <- fit[,2]
+  beta_2 <- fit[,3]
+  t <- fit[,4]
+  
+  for (j in 1:ncol(y_matrix)){
+    m = maturities[j]
+    
+    Fit_arr[,j] = beta_0 + beta_1*(1-exp(-m/t))/(m/t) + beta_2*((1-exp(-m/t))/(m/t) - exp(-m/t))
+    
+    
+  }
+  
+  return(Fit_arr)
 }
 
-plot(fnt_arr[1,])
 
 
+
+#### Nelson Siegel With Moint ####
+
+reg <- NelsonSiegel(moint_matrix, c(1/12, 2/12, 3/12, 4/12, 5/12, 6/12, 7/12, 8/12, 9/12, 10/12, 11/12, 12/12))
+
+test <- c(1/12, 2/12, 3/12, 4/12, 5/12, 6/12, 7/12, 8/12, 9/12, 10/12, 11/12, 12/12)
+
+test*12
+reg
+
+MeanForward = array(NA, dim = 12)
+MeanForwardPred = array(NA, dim = 12)
+MeanForwardPredNelson = array(NA, dim = 12)
+
+for (i in 1:12){
+  MeanForwardPredNelson[i] = mean(reg[,i])
+}
+
+for (i in 1:12){
+  MeanForward[i] = mean(reg[,i])
+}
+
+MeanForward
+MeanForwardPred
+plot(MeanForward, type = "l", ylim = c(5,10))
+lines(MeanForwardPred, type = "l", col = "red")
+lines(MeanForwardPredNelson, type = "l", col = "blue")
+
+
+plot(reg$fitted.values, ylim = c(8,10), type = "l")
+
+lines(Hom$FW_Matrix[1,], col = "red")
+
+lines(Hom$fnt_arr[1,], col = "blue")
+
+# With large data # 
+ 
+reg <- NelsonSiegel(Final_arr[,2:30], Maturities[2:30])
+
+
+for (i in 1:12){
+  MeanForwardPredNelson[i] = mean(reg[,i])
+}
+
+for (i in 1:12){
+  MeanForwardPred[i] = mean(Hom$fnt_arr[,i])
+}
+
+for (i in 1:12){
+  MeanForward[i] = mean(Hom$FW_Matrix[,i])
+}
+
+Hom <- HomoModel(Final_arr[,2:30], Maturities[2:30])
+
+Maturities[25]*12
+
+plot(Hom$FW_Matrix[123,], type = "l")
+lines(reg[123,])
+
+
+
+plot(Final_arr[123,2:30])
+
+lines(reg[123,])
+
+
+
+reg
+
+reg
+
+
+plot(MeanForward, type = "l", ylim = c(5,10))
+lines(MeanForwardPred, type = "l", col = "red")
+lines(MeanForwardPredNelson, type = "l", col = "blue")
+
+
+
+
+Fit <- NelsonSiegelPackage(moint_matrix, Moint_Maturities*12)
+
+plot(Fit[1,], type = "l", ylim = c(0,10))
+lines(reg[1,], type = "l")
+plot(Hom$FW_Matrix[1,], type = "l")
+plot(Hom$fnt_arr[1,])
+
+
+
+
+lines(moint_matrix[1,])
+
+moint_matrix[1,]
+
+
+
+library(YieldCurve)
+
+nel_curve <- Nelson.Siegel(Final_arr[,2:30], Maturities[2:30]*12)
+
+coef <- c(manel_curve[1,][[1]], nel_curve[1,][[2]], nel_curve[1,][[3]], nel_curve[1,][[4]])
+
+?NSrates
+
+arr <- array(NA, dim = dim(nel_curve))
+NSrates(nel_curve, 10)
+
+for (i in 1:nrow(nel_curve)){
+  for (j in 1:ncol(nel_curve)){
+    arr[i,j] <- nel_curve[[i,j]]
+  }
+  
+}
+nel_curve[[1,2]]
+time(nel_curve)
+
+NSrates(arr,Maturities[2:30]*12)
