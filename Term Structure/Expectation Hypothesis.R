@@ -264,7 +264,7 @@ summary(TestLargeData)
 # coefficient is way more significant in this one! 
 
 
-### Model forward rates using the Vasicek (Homoscedastic model) ###
+### Model forward rates? using the Vasicek (Homoscedastic model) ###
 
 HomoModel <- function(y_matrix, maturities){
   
