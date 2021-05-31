@@ -395,7 +395,7 @@ plot.ts(Fit$mU, main = "Smoothed probabilities")
 
 ## I noted that for some reasons price changes are not rounded, here I use round()
 ## absolute price changes
-vY = abs(round(read.csv("JPM.csv", sep = ",", row.names = 1, header = FALSE, stringsAsFactors = FALSE)[[1]]))
+vY = abs(round(read.csv("Time-varying/Data/JPM.csv", sep = ",", row.names = 1, header = FALSE, stringsAsFactors = FALSE)[[1]]))
 
 ## EM for the ZIP model
 

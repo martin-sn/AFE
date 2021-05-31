@@ -4,7 +4,6 @@
 Mixture = matrix(c(5,-4,1.5,0.7,0.95,0.05), nrow = 2, byrow = FALSE)
 
 
-
 ## Simulate Gaussian Mixture ##
 
 
@@ -28,7 +27,6 @@ plot(Y, type = "l")
 ### Estimate Gaussian Mixture by EM Algorithm ###
 
 # E-Step
-
 E_EMGaussMix <- function(Y,J, Mixture){
   
   N = length(Y)
@@ -44,7 +42,6 @@ E_EMGaussMix <- function(Y,J, Mixture){
 
 
 # M-Step 
-
 M_EMGaussMix <- function(Y,J,P){
   
   N = length(Y)
@@ -104,8 +101,93 @@ Run_EMGaussMix <- function(Y,J, IT){
 }
 
 
-Run_EMGaussMix(vY,3,1000)
+Run_EMGaussMix(Y,2,1000)
 
-plot(density(vY))
+
 
 plot(density(Y))
+
+
+##### Rigorous Edition #####
+
+
+EStep <- function(Y,J,Mixture){
+  
+  N = nrow(Y)
+  
+  # Forward Probabilities #
+  
+  a = array(NA, dim = c(length(Y), J))
+  
+  for (i in 1:N){
+    for (j in 1:J){
+      a[i,j] = dnorm(Y[i], Mixture[j,1], Mixture[j,2], log = FALSE) * (Mixture[j,3])
+    }
+  }
+  
+  # Backwards Probabilities # 
+  
+  # Forward and backward probabilities are equivalent in a gaussian mixture! 
+  
+  
+  # Smoothed Probabilities # 
+  
+  SP <- array(NA, dim = dim(a))
+  
+  for (i in 1:N){
+    for (j in 1:J){
+      SP[i,j] = a[i,j] /sum(a[i,])
+    }
+  }
+  return(SP)
+}
+
+test <- EStep(Y, 2, Mixture)
+
+MStep <- function(Y, SP, J){
+  
+  Mixture = matrix(NA, nrow = J, ncol=3)
+  
+  N = length(Y)
+  
+  for(j in 1:J){
+    
+    # Probability estimate
+    Mixture[j,3] = sum(SP[,j]) / N
+    
+    # Mean estimate
+    Mixture[j,1] = sum(SP[,j]*Y)/sum(SP[,j])
+    
+    # Variance estimate
+    Mixture[j,2] = sqrt(sum(SP[,j]*(Y-Mixture[j,1])**2) / sum(SP[,j]))
+
+  }
+  return(Mixture)
+}
+
+
+Mix <- MStep(Y, test, 2)
+
+Mix
+
+RunEM <- function(Y, Iterations, J){
+  
+  Mixture <- matrix(c(3,-2,0.3,1.5,0.3,0.7), nrow = 2, byrow = FALSE)
+
+    
+  for (i in 1:Iterations){
+    SP = EStep(Y,J,Mixture)
+    
+  
+    Mixture = MStep(Y,SP,J)
+    
+    }
+ 
+  return(Mixture) 
+}
+
+res <- RunEM(Y,1000,2)
+
+res
+
+

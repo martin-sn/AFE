@@ -4,13 +4,15 @@
 SimZIP <- function(n, p, lambda){
   Y = array(NA, n)
   for (i in 1:n){
-    Y[i] = (1-rbinom(1,1, prob = p))*rpois(1,1)
+    Y[i] = (1-rbinom(1,1, prob = p))*rpois(1,lambda)
   }
   return(Y)
 }
 
-plot(SimZIP(100,0.5,10), type = "l")
-rpois(1,10)
+
+
+Y = SimZIP(1000, 0.15, 15)
+plot(Y, type = "l")
 
 
 ### Estimate ZIP by EM Algorithm ###
@@ -27,18 +29,27 @@ PMF_ZIP <- function(y,p,lambda){
 }
 
 
-E_EMZIP <- function(Y,J, Mixture){
+E_EMZIP <- function(Y,p,lambda){
   
   N = length(Y)
-  P = array(NA, c(N,J))
+  P = array(NA, c(N,2))
   
   for (i in 1:N){
-    for (j in 1:J){
-      P[i,j] = dnorm(Y[i], Mixture[j,1], Mixture[j,2])
+    P[i,1] <- ifelse(Y[i] != 0, 0, p)
+    P[i,2] <- ifelse(Y[i] != 0, (1-p)*(exp(-lambda)*lambda**(Y[i])/factorial(Y[i])), (1-p)*exp(-lambda))
+  }
+  
+  SP <- array(NA, c(N,2))
+  
+  for (i in 1:N){
+    for (j in 1:2){
+      SP[i,j] = P[i,j]/sum(P[i,])
     }
   }
-  return(P)
+  return(SP)
+
 }
+P <- E_EMZIP(Y, 4, 1)
 
 #### Probability of a ZIP ####
 # Y can be 0, if either poison process outputs zero, or the bernoulli is 1
@@ -51,57 +62,72 @@ M_EMZIP <- function(Y,J,P){
   
   N = length(Y)
   
-  Mixture = array(NA, dim = c(J,3))
+  p = sum(P[,1]) /sum(P)
   
-  for (j in 1:J){
-    Mixture[j,1] = 1/sum(P[,j]) * sum(P[,j]*Y)
-    Mixture[j,2] = sqrt(1/sum(P[,j]) * sum(P[,j]*(Y-Mixture[j,1])**2))
-    Mixture[j,3] = sum(P[,j]) / N 
-  }
-  return(Mixture)
+  lambda = sum(P[,2]*Y) / sum(P[,2])
+    
+  out = matrix(c(p,lambda))
+  return(out)
 }
 
 
+RUN_EMZIP <- function(Y,J,Iterations){
 
-Run_EMGaussMix <- function(Y,J, IT){
+  # Init
+  p <- runif(1,0,1)
+  lambda = mean(Y)
   
-  # Initialize mixture
   
-  N = length(Y)
-  
-  Mixture = array(NA, dim = c(J,3))
-  
-  seq_init = seq(from = 0.7, to = 1.5, length.out = J)
-  
-  Mixture[,1] = mean(Y) * seq_init
-  Mixture[,2] = sd(Y) * seq_init
-  Mixture[,3] = 1/J
-  
-  for (i in 1:IT){
-    P = E_EMGaussMix(Y,J, Mixture)
-    Mixture = M_EMGaussMix(Y,J,P)
-  }
-  
-  LLK = 0
-  
-  for (i in 1:N){
-    K_LLK = 0
-    for (j in 1:J){
-      K_LLK = K_LLK + Mixture[j,3]*dnorm(Y[i], mean = Mixture[j,1], sd = Mixture[j,2])
-    }
-    
-    LLK = LLK + log(K_LLK)
-    
-    
+  for (i in 1:Iterations){
+    P <- E_EMZIP(Y,p,lambda)
+    M <- M_EMZIP(Y,J,P)
+    p = M[1]
+    lambda = M[2]
     
   }
   
-  print(paste("LLK:",sum(LLK)))
-  
-  BIC = (nrow(Mixture)*3-1)*log(N) - 2*sum(LLK)
-  
-  print(paste("BIC:", BIC))
-  return(Mixture)
-  
+  print(p)
+  print(lambda)
   
 }
+
+RUN_EMZIP(Y,2,100)
+
+library(tidyverse)
+
+JMP <- read_csv("Time-varying/Data/JPM.csv", col_names = FALSE)
+
+
+RUN_EMZIP(abs(JMP$X2), 2, 1000)
+
+
+
+###### Mixture ZIP ####### 
+
+# Mixture format
+
+#Matrix
+
+# Col 1 = Switch prob
+# Col 2 = lambda
+
+SimMixtureZIP <- function(n,mixture, inflationprob){
+  J = nrow(mixture)
+  Y = array(NA, n)
+  
+  for (i in 1:n){
+    j = sample(1:J, size = 1, prob=mixture[,1])
+    Y[i] = (1-rbinom(1,1, prob = inflationprob))*rpois(1,mixture[j,2])
+  }
+  return(Y)
+}
+
+
+SimMix <- matrix(c(0.75,0.25, 30, 5), nrow = 2, byrow = FALSE)
+
+Y <- SimMixtureZIP(1000, SimMix, 0.65)
+
+plot(Y, type = "l")
+
+
+
